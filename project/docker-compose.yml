@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo-data:/data/db
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  api:
+    build: ./api
+    container_name: fastapi_app
+    volumes:
+      - ./api:/app/api  # Копируем все файлы в контейнер в /app/api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+    env_file:
+      - ./.env
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  bot:
+    build: ./bot
+    container_name: telegram_bot
+    volumes:
+      - ./bot:/app/bot
+    env_file:
+      - ./.env
+    depends_on:
+      - api
+    command: python main.py
+
+  nginx:
+    build: ./nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - api
